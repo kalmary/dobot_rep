@@ -43,7 +43,7 @@ def move_arm(b_div, a_div, h_div, side_div, ctrlBot, chan):
     k=0
     
     
-    
+                                           
     volt = np.zeros((len(a_div), len(side_div)))
    
     side_div.tolist()
@@ -68,7 +68,7 @@ def move_arm(b_div, a_div, h_div, side_div, ctrlBot, chan):
    
     for i in range(0, len(a_div)):
             #bar.text = f'-> Line: {i} of {len(a_div)}, please wait...'
-        ctrlBot.moveArmXYZ(b_div[j], a_div[i], h_div[1])
+        #ctrlBot.moveArmXYZ(b_div[j], a_div[i], h_div[1])
         for j in range(0, len(b_div)):
             event, values = window.read(timeout = 1)
             
@@ -92,7 +92,7 @@ def move_arm(b_div, a_div, h_div, side_div, ctrlBot, chan):
             #[sg.EasyProgressMeter('Processing... Please wait', k+1, n)]
             k+=1
         j = j - len(b_div)
-        ctrlBot.moveArmXYZ(b_div[j], a_div[i], h_div[1])
+        #ctrlBot.moveArmXYZ(b_div[j], a_div[i], h_div[1])
         
         
       
@@ -156,7 +156,7 @@ def what2do_GUI(api, ctrlBot, chan):
         [sg.Button('Scan of the point', size = button_size, key = '-point-', pad = padding)],
         [sg.Button('Quit', button_color= 'red', size = button_size, key = '-quit-', pad = padding)]
         ]
-    
+    mode = 1 #0 - mia    1 - eddy 
     window=sg.Window('What2do', layout)
     
     while True:
@@ -166,10 +166,10 @@ def what2do_GUI(api, ctrlBot, chan):
                 break
         
             if event == '-scan-':
-                scan_gui(a_max, b_max, h_max, ctrlBot, homex_min, homeX, homeY, homeZ, chan)
+                scan_gui(a_max, b_max, h_max, ctrlBot, homex_min, homeX, homeY, homeZ, chan, mode)
         
             if event == '-point-':
-                point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan)
+                point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan, mode)
             
             if event == '-quit-':
                 break
@@ -179,7 +179,7 @@ def what2do_GUI(api, ctrlBot, chan):
             
     window.close()
             
-def scan_gui(a_max, b_max, h_max, ctrlBot, homex_min, homeX, homeY, homeZ, chan):
+def scan_gui(a_max, b_max, h_max, ctrlBot, homex_min, homeX, homeY, homeZ, chan, mode):
     dim = [None] * 3
     
     res_values=np.around(np.arange(0.1, 5.1, 0.1), decimals = 2).tolist()
@@ -248,7 +248,7 @@ def scan_gui(a_max, b_max, h_max, ctrlBot, homex_min, homeX, homeY, homeZ, chan)
 #         elif event == '-a-':
 #             window['-a-'].update(f'')
           
-            a_div, b_div, h_div = scan(dim, res, ctrlBot, homex_min, homeX, homeY, homeZ, chan)
+            a_div, b_div, h_div = scan(dim, res, ctrlBot, homex_min, homeX, homeY, homeZ, chan, mode)
             
             choose_plot_gui(a_div, side_div, res, volt)
             break
@@ -289,7 +289,7 @@ def done_gui(switch):
             
     window.close()
 
-def point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan):
+def point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan, mode):
     
     button_size = (5, 2)
     pad_size = (10, 3)
@@ -340,14 +340,8 @@ def point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan):
             
             h=h-100
             h_div=[h+70, h+80]
-            
-    
-            
-            
-            
-            
                 
-            a_div, b_div, volt = point_move(h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan)
+            a_div, b_div, volt = point_move(h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan, mode)
             choose_plot_gui(a_div, b_div, res, volt)
                 
             break
@@ -356,7 +350,7 @@ def point_gui(ctrlBot, h_max, homeX, homeY, homeZ, chan):
     window.close()
         
     
-def point_move (h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan):
+def point_move (h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan, mode):
     #ctrlBot.moveHome()
     
   
@@ -365,13 +359,23 @@ def point_move (h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan):
     a_div=dim_list(-area_side/2,area_side/2, res)
     b_div=dim_list(homeX-area_side/2, homeX+area_side/2, res)
     side_div = get_side(b_div, res)
-    #with ctrlBot.safe_stop():
-    #print('Processing. Please wait...')
+    
+    
+    if mode == 1:
+        print("Eddy Current Testing mode")
+        h_div = eddy_move(h, ctrlBot, a_div, b_div, homeZ)
+    else:
+        print("MIA mode")
+        
     ctrlBot.moveArmXYZ(b_div[int(len(b_div)/2)], a_div[int(len(a_div)/2)], h_div[1])
     
     for i in range(0, 3):
-                ctrlBot.pickToggle(h_div[0])
-                ctrlBot.pickToggle(h_div[1])
+#                 ctrlBot.pickToggle(h_div[0])
+#                 ctrlBot.pickToggle(h_div[1])
+        ctrlBot.moveArmXYZ(b_div[int(len(b_div)/2)], a_div[int(len(a_div)/2)], h_div[0])
+        ctrlBot.moveArmXYZ(b_div[int(len(b_div)/2)], a_div[int(len(a_div)/2)], h_div[1])
+
+
     done_gui(0)
     
     volt = move_arm(b_div, a_div, h_div, side_div, ctrlBot, chan)
@@ -381,21 +385,45 @@ def point_move (h, h_div, res, ctrlBot, h_max, homeX, homeY, homeZ, chan):
 
     return a_div, b_div, volt
 
-def scan(dim, res, ctrlBot, homex_min, homeX, homeY, homeZ, chan):
+
+def eddy_move(h, ctrlBot, a_div, b_div, homeZ):
+    x_max = home()[5]
+    h_div = [h+45, h + 55]  # offset
+        
+    #if n == 0:
+    ctrlBot.moveArmXYZ(x_max, a_div[int(len(a_div)/2)], homeZ)
+    #if n == 1:
+     #   ctrlBot.moveArmXYZ(x_max, a_div[int(len(a_div)/2)], homeZ)
+    ctrlBot.moveArmXYZ(b_div[0], a_div[int(len(a_div)/2)], h_div[0])
+    return h_div
+    
+  
+
+def scan(dim, res, ctrlBot, homex_min, homeX, homeY, homeZ, chan, mode):
     
     resolution=res
     
     a_div=dim_list(-dim[0]/2, dim[0]/2, resolution) #kierunek y (dluzsza tablica)
     b_div=dim_list(homex_min, homex_min+dim[1], resolution) #krotsza tablica
     side_div = get_side(b_div, res)
+    
     dim[2]=dim[2]-100
     h_div = [dim[2] + 70, dim[2] + 80]  # offset
-    
+    h_pom = dim[2]
+
     ctrlBot.moveHome()
     
+    if mode == 1:
+        print("Eddy Current Testing mode")
+        h_div = eddy_move(h_pom, ctrlBot, a_div, b_div, homeZ)
+    else:
+        print("MIA mode")
+        
     for i in range(0, 3):
-        ctrlBot.pickToggle(h_div[0])
-        ctrlBot.pickToggle(h_div[1])
+        #ctrlBot.pickToggle(h_div[0])
+        #ctrlBot.pickToggle(h_div[1])
+        ctrlBot.moveArmXYZ(b_div[0], a_div[int(len(a_div)/2)], h_div[0])
+        ctrlBot.moveArmXYZ(b_div[0], a_div[int(len(a_div)/2)], h_div[1])
             
     done_gui(1) 
  
@@ -420,6 +448,7 @@ def voltage():
     ads = ADS.ADS1015(i2c)
     
     #chan = AnalogIn(ads, ADS.P0, ADS.P1)
+    #chan = AnalogIn(ads, ADS.P1)
     chan = AnalogIn(ads, ADS.P0)
     
     return chan
